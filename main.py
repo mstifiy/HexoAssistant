@@ -2,7 +2,6 @@ import os
 import sys
 import time
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import QCoreApplication
 
 from UI_MainWindow import Ui_Form
 
@@ -55,14 +54,6 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
         self.statusBar.showMessage('文章加载成功！', 3000)
 
     def uploadFile(self):
-        # 上传进度条显示
-        progDlg = QtWidgets.QProgressDialog('上传进度', '取消', 0, 100, self)
-        progDlg.setWindowTitle('文章上传中……')
-        progDlg.show()
-        progDlg.setStyleSheet("QProgressDialog{color: #f187b8;}")
-        progDlg.setValue(25)
-        QCoreApplication.processEvents()
-
         # 获取文章信息
         self.file_info['path'] = self.lineEdit.text()
         self.file_info['title'] = self.title_lineEdit.text()
@@ -72,8 +63,6 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
         self.file_info['index_img'] = self.indexImg_lineEdit.text()
         self.file_info['excerpt'] = self.excerpt_lineEdit.text()
         self.file_info['imgBed'] = self.imgBed_checkBox.isChecked()
-        progDlg.setValue(50)
-        QCoreApplication.processEvents()
 
         # 修改追加文章信息
         with open(self.file_info['path'], "r+", encoding = "utf-8") as f:
@@ -86,16 +75,12 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
             content = hexo_title + txt
         with open(os.path.join(self.post_path, self.file_info['title']+'.md'), 'w', encoding = "utf-8") as f:
             f.write(content)
-        progDlg.setValue(75)
-        QCoreApplication.processEvents()
 
         # hexo本地文章上传github
         import subprocess
         cmd = 'hexo clean' + "&&" + 'hexo g' + "&&" + 'hexo d'
         p = subprocess.Popen(cmd, shell = True, cwd = 'D:/blog/hexo', stdout = subprocess.PIPE)
         print(p.stdout.read().decode('utf-8'))  # 打印命令行输出信息
-        progDlg.setValue(100)
-        QCoreApplication.processEvents()
         self.statusBar.showMessage('文章上传成功！', 3000)
 
 
