@@ -2,12 +2,21 @@ import os
 import shutil
 import sys
 import time
-from PyQt5 import QtWidgets, QtGui
-
+from PyQt5 import QtWidgets, QtGui, QtCore
 from UI_MainWindow import Ui_Form
 
 __appname__ = 'Hexo Assistant'
 __version__ = '1.0'
+
+
+class Worker(QtCore.QThread, QtCore.QObject):  # 自定义信号，执行run()函数时，从线程发射此信号
+    def __init__(self, obj, parent = None):
+        QtCore.QThread.__init__(self, parent)
+        QtCore.QObject.__init__(self, parent)
+        self.obj = obj
+
+    def run(self):
+        self.obj.uploadFile_thread()
 
 
 class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
@@ -20,6 +29,7 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
         self.statusBar.setStyleSheet("color:#f187b8;font-size:7pt;font-weight:bold")
         self.verticalLayout.addWidget(self.statusBar)
         self.setAcceptDrops(True)  # 设置接受拖拽
+        self.thread_upload = Worker(self, None)  # 设置上传线程，防止程序假死
         self.setWindowTitle('{} - v{}'.format(__appname__, __version__))
         self.setWindowIcon(QtGui.QIcon('source/icon/app_logo.png'))
         # 文章信息
@@ -75,10 +85,6 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
         self.statusBar.showMessage('文章加载成功！', 3000)
 
     def uploadFile(self):
-        if self.file_info['path'] == '':
-            self.statusBar.showMessage('请先加载文章哦~', 2000)
-            return
-
         # 获取文章信息
         self.file_info['path'] = self.lineEdit.text()
         self.file_info['title'] = self.title_lineEdit.text()
@@ -88,8 +94,14 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
         self.file_info['index_img'] = self.indexImg_lineEdit.text()
         self.file_info['excerpt'] = self.excerpt_lineEdit.text()
         self.file_info['imgBed'] = self.imgBed_checkBox.isChecked()
+        if self.file_info['path'] == '':
+            self.statusBar.showMessage('请先加载文章哦~', 2000)
+            return
         # self.parse_md(self.file_info['path'])
+        self.statusBar.showMessage('正在努力上传中，不要乱点，嗯哼...', 0)
+        self.thread_upload.start()
 
+    def uploadFile_thread(self):
         # 修改追加文章信息
         with open(self.file_info['path'], "r+", encoding = "utf-8") as f:
             txt = str(f.read())
@@ -98,7 +110,8 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
                 if val != '' and val != [''] and key != 'imgBed':
                     if key == 'index_img':
                         relative_path = self.copyImg(val)  # 复制文件
-                        hexo_title += f'{key}: {relative_path}\n'
+                        if relative_path:
+                            hexo_title += f'{key}: {relative_path}\n'
                         continue
                     hexo_title += f'{key}: {val}\n'
             hexo_title += f'---\n'
