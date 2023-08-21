@@ -56,12 +56,12 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
 
     def uploadFile(self):
         # 上传进度条显示
-        # progDlg = QtWidgets.QProgressDialog('上传进度', '取消', 0, 100, self)
-        # progDlg.setWindowTitle('文章上传中……')
-        # progDlg.show()
-        # progDlg.setStyleSheet("QProgressDialog{color: #f187b8;}")
-        # progDlg.setValue(25)
-        # QCoreApplication.processEvents()
+        progDlg = QtWidgets.QProgressDialog('上传进度', '取消', 0, 100, self)
+        progDlg.setWindowTitle('文章上传中……')
+        progDlg.show()
+        progDlg.setStyleSheet("QProgressDialog{color: #f187b8;}")
+        progDlg.setValue(25)
+        QCoreApplication.processEvents()
 
         # 获取文章信息
         self.file_info['path'] = self.lineEdit.text()
@@ -72,8 +72,8 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
         self.file_info['index_img'] = self.indexImg_lineEdit.text()
         self.file_info['excerpt'] = self.excerpt_lineEdit.text()
         self.file_info['imgBed'] = self.imgBed_checkBox.isChecked()
-        # progDlg.setValue(50)
-        # QCoreApplication.processEvents()
+        progDlg.setValue(50)
+        QCoreApplication.processEvents()
 
         # 修改追加文章信息
         with open(self.file_info['path'], "r+", encoding = "utf-8") as f:
@@ -83,22 +83,19 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
                 if val != '' and val != [''] and key != 'imgBed':
                     hexo_title += f'{key}: {val}\n'
             hexo_title += f'---\n'
-            # hexo_title = f"---\ntitle: {self.file_info['title']}\ndate: {self.file_info['date']}\n" \
-            #              f"tags: {self.file_info['tags']}\ncategories: {self.file_info['categories']}\n" \
-            #              f"index_img: {self.file_info['index_img']}\nexcerpt: {self.file_info['excerpt']}\n---\n"
             content = hexo_title + txt
         with open(os.path.join(self.post_path, self.file_info['title']+'.md'), 'w', encoding = "utf-8") as f:
             f.write(content)
-        # progDlg.setValue(75)
-        # QCoreApplication.processEvents()
+        progDlg.setValue(75)
+        QCoreApplication.processEvents()
 
         # hexo本地文章上传github
         import subprocess
         cmd = 'hexo clean' + "&&" + 'hexo g' + "&&" + 'hexo d'
         p = subprocess.Popen(cmd, shell = True, cwd = 'D:/blog/hexo', stdout = subprocess.PIPE)
         print(p.stdout.read().decode('utf-8'))  # 打印命令行输出信息
-        # progDlg.setValue(100)
-        # QCoreApplication.processEvents()
+        progDlg.setValue(100)
+        QCoreApplication.processEvents()
         self.statusBar.showMessage('文章上传成功！', 3000)
 
 
