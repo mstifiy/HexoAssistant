@@ -16,7 +16,9 @@ class Worker(QtCore.QThread, QtCore.QObject):  # 自定义信号，执行run()�
         self.obj = obj
 
     def run(self):
+        self.obj.uploadBtn.setEnabled(False)  # 设置上传按钮不可用
         self.obj.uploadFile_thread()
+        self.obj.uploadBtn.setEnabled(True)
 
 
 class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
@@ -41,10 +43,17 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
                           'index_img': '',
                           'excerpt': '',
                           'imgBed': False}
-        # blog文章存放路径
-        self.post_path = 'D:/blog/hexo/source/_posts'
-        # blog封面图片存放路径
-        self.index_path = 'D:/blog/hexo/source/img'
+        # 加载配置文件
+        self.load_settings()
+
+    def load_settings(self):
+        try:
+            self.settings = QtCore.QSettings("config.ini", QtCore.QSettings.IniFormat)
+            self.post_path = self.settings.value('PATH/post_path')  # blog文章存放路径
+            self.index_path = self.settings.value('PATH/index_path')  # blog封面图片存放路径
+            self.hexo_path = self.settings.value('PATH/hexo_path')  # hexo路径
+        except Exception:
+            self.statusBar.showMessage('配置文件加载出错，请检查config.ini文件！', 3000)
 
     def parse_md(self, filename):
         # 显示路径
@@ -99,10 +108,9 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
             return
         # self.parse_md(self.file_info['path'])
         self.statusBar.showMessage('正在努力上传中，不要乱点，嗯哼...', 0)
-        self.thread_upload.start()
-
-    def uploadFile_thread(self):
         # 修改追加文章信息
+        if self.file_info['imgBed']:
+            self.change_pic_path()  # 图片上传图床
         with open(self.file_info['path'], "r+", encoding = "utf-8") as f:
             txt = str(f.read())
             hexo_title = f'---\n'
@@ -118,11 +126,15 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
             content = hexo_title + txt
         with open(os.path.join(self.post_path, self.file_info['title'] + '.md'), 'w', encoding = "utf-8") as f:
             f.write(content)
+        # 启用多线程
+        self.thread_upload.start()
 
+    def uploadFile_thread(self):
         # hexo本地文章上传github
         import subprocess
-        cmd = 'hexo clean' + "&&" + 'hexo g' + "&&" + 'hexo d'
-        p = subprocess.Popen(cmd, shell = True, cwd = 'D:/blog/hexo', stdout = subprocess.PIPE)
+        cmd = 'hexo g' + "&&" + 'hexo d'
+        # cmd = 'hexo clean' + "&&" + 'hexo g' + "&&" + 'hexo d'
+        p = subprocess.Popen(cmd, shell = True, cwd = self.hexo_path, stdout = subprocess.PIPE)
         print(p.stdout.read().decode('utf-8'))  # 打印命令行输出信息
         self.statusBar.showMessage('文章上传成功！', 3000)
 
@@ -147,6 +159,55 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
                     self.file_info['index_img'] = filename
                 else:
                     self.statusBar.showMessage('不支持拖放文件类型！', 2000)
+
+    def change_pic_path(self):
+        import re
+        print("please wait a moment")
+        try:
+            with open(self.file_info['path'], 'r', encoding = 'utf-8') as md:
+                article_content = md.read()
+                pic_block = re.findall(r'\!.*?\)', article_content)  # 获取添加图片的Markdown文本
+                for i in range(len(pic_block)):
+                    pic_origin_url = re.findall(r'\((.*?)\)', pic_block[i])  # 获取插入图片时图片的位置
+                    pic_new_url = self.upload_gitee(pic_origin_url[0])  # 上传得到gitee图片链接
+                    print("pic_new_url is {}".format(pic_new_url))
+                    article_content = article_content.replace(pic_origin_url[0], pic_new_url)
+            # 替换原md文件中的图片链接
+            with open(self.file_info['path'], 'w', encoding = 'utf-8') as md:
+                md.write(article_content)
+            print("job done")
+        except BaseException as err:
+            print("error in change_pic_path\n{}".format(err))
+
+    def upload_gitee(self, pic_origin_url):  # 上传至Gitee
+        if not os.path.exists(pic_origin_url):
+            return pic_origin_url
+        import base64
+        import hashlib
+        import datetime
+        import requests
+        try:
+            token = self.settings.value('Gitee/token')
+            owner = self.settings.value('Gitee/owner')
+            repo = self.settings.value('Gitee/repo')
+        except Exception:
+            self.statusBar.showMessage('图片上传错误，请检查Gitee图床配置！', 2000)
+            return
+        message = 'upload image'
+        mdname = ''
+        with open(pic_origin_url, "rb") as f:
+            content = base64.b64encode(f.read())
+            data = {'access_token': token, 'message': message, 'content': content}
+
+            filename = hashlib.md5(content).hexdigest() + pic_origin_url[pic_origin_url.rfind('.'):]
+            path = 'typora/' + (mdname if mdname != '' else str(datetime.date.today())) + '/' + filename
+            res = requests.post('https://gitee.com/api/v5/repos/' + owner + '/' + repo + '/contents/' + path, data)
+            if res.status_code == 201 or res.text == '{"message":"文件名已存在"}':
+                # print('https://gitee.com/' + owner + '/' + repo + '/raw/master/' + path)
+                return 'https://gitee.com/' + owner + '/' + repo + '/raw/master/' + path
+            else:
+                print('Error uploading Gitee, please check')
+                return None
 
 
 if __name__ == '__main__':
