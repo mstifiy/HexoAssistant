@@ -1,5 +1,5 @@
 # HexoAssistant
-Hexo Assistant
+Hexo Assistant————博客便捷上传助手
 ## 关于如何使用？
 - 首先将本仓库克隆到本地。
 ```
