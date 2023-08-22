@@ -33,7 +33,7 @@ class HexoAssistantWin(QtWidgets.QWidget, Ui_Form):
         self.setAcceptDrops(True)  # 设置接受拖拽
         self.thread_upload = Worker(self, None)  # 设置上传线程，防止程序假死
         self.setWindowTitle('{} - v{}'.format(__appname__, __version__))
-        self.setWindowIcon(QtGui.QIcon('source/icon/app_logo.png'))
+        # self.setWindowIcon(QtGui.QIcon('source/icon/app_logo.png'))
         # 文章信息
         self.file_info = {'path': '',
                           'title': '',

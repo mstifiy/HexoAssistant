@@ -31,6 +31,10 @@
   <property name="windowTitle">
    <string>Hexo Assistant</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="images.qrc">
+    <normaloff>:/icon/source/icon/app_logo.png</normaloff>:/icon/source/icon/app_logo.png</iconset>
+  </property>
   <property name="styleSheet">
    <string notr="true"/>
   </property>
